@@ -1,38 +1,83 @@
 <!-- add header -->
 <%- include('includes/_header') %>
 <!-- end header -->
+
 <!-- Main section -->
 <main id="main">
 
-	<h2>Calculate Drugs to purchase</h2>
-	<p>For how many days do you want to purchase drugs?</p> <form id="drug_days"> <input type="number" id="days" value="30"> <button type="submit">Enter</button> </form>
+  <h2>Calculate Drugs to purchase</h2>
+  <p>For how many days do you want to purchase drugs?</p> 
+  <form id="drug_days">
+    <input type="number" id="days" name="days" value="<%= days %>"> 
+    <button type="submit">Enter</button> 
+  </form>
 
-	<table id="purchase_table">	
-		<thead>
-			<tr>
-				<th>ID</th>
-				<th>Drug Name</th>
-				<th> Cards to Buy</th>
-				<th>Packs to Buy</th>
-			</tr>
-		</thead>
-		<tbody>
-			<!-- Loop through drugs -->
-			<% for(let i = 0; i < drugs.length; i++) {%>
-			<% let days = 30; %>
-			<% let pills = days*drugs[i].perDay; %>
-			<tr>
-				<td><%= i + 1 %></td>
-				<td><%= drugs[i].name %></td>
-				<td><%= Math.ceil(pills/drugs[i].card) %> (<%= drugs[i].pack/drugs[i].card %> <% if (drugs[i].pack/drugs[i].card < 2) { %> card <%} else { %> cards <% } %> per pack)</td>
-				<td><%= Math.ceil(pills/drugs[i].pack) %></td>
-			</tr>
-			<% } %> <!--  End loop -->
-		</tbody>
-	</table>
+  <table id="purchase_table">  
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Drug Name</th>
+        <th>Cards to Buy</th>
+        <th>Packs to Buy</th>
+      </tr>
+    </thead>
+     <tbody>
+	<% for(let i = 0; i < drugs.length; i++) { 
+		let totalPerDay = 0;
+		if (typeof drugs[i].perDay === 'string') {
+			totalPerDay = drugs[i].perDay.split(',')
+			.reduce((sum, val) => sum + (parseInt(val) || 0), 0);
+		} else {
+			totalPerDay = drugs[i].perDay;
+		}
+
+		let totalPills = totalPerDay * days;
+		let cardPerCard = drugs[i].card; // viên trên 1 card
+		let cardsPerPack = drugs[i].pack / drugs[i].card; // số card trong 1 pack
+
+		let cardsNeeded = Math.ceil(totalPills / cardPerCard);
+		let packsNeeded = Math.ceil(cardsNeeded / cardsPerPack);
+	%>
+	<tr>
+		<td><%= i + 1 %></td>
+		<td><%= drugs[i].name %></td>
+		<td>
+		<%= cardsNeeded %> (<%= cardsPerPack.toFixed(2) %> card per pack)
+		</td>
+		<td><%= packsNeeded %></td>
+	</tr>
+	<% } %>
+	</tbody>
+  </table>
 </main>
-<!-- End main section -->
+
+<script>
+  // khi submit số ngày
+  document.getElementById('drug_days').addEventListener('submit', function(e){
+    e.preventDefault();
+    const days = document.getElementById('days').value;
+    window.location.href = '/purchase?days=' + days;
+  });
+
+  // khi bấm confirm purchase
+  document.querySelectorAll('.confirm-purchase').forEach(btn => {
+    btn.addEventListener('click', async function(){
+      const drugId = this.dataset.id;
+      const quantity = this.dataset.qty;
+
+      const res = await fetch('/api/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json'},
+        body: JSON.stringify({ drugId, quantity })
+      });
+
+      const data = await res.json();
+      alert(data.message || "Purchase done!");
+      window.location.reload();
+    });
+  });
+</script>
+
 <!-- add footer -->
 <%- include('includes/_footer') %>
 <!-- end footer-->
-
